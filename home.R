@@ -1,0 +1,3 @@
+home <- fluidPage(
+  uiOutput("homeUI")
+)
