@@ -2,6 +2,7 @@ library(shiny)
 library(markdown)
 library(shinyjs)
 library(DT)
+library(shinyWidgets)
 
 source("home.R")
 source("indicadores.R")
