@@ -8,6 +8,7 @@ source("home.R")
 source("indicadores.R")
 
 navbarPage(
+  id = "navbarTabs",
   "VISESP",
   tabPanel(
     "Home",
