@@ -21,6 +21,7 @@ indicadores <- fluidPage(
            uiOutput("boxMedidasResumo"),
            uiOutput("painelCondicionalCarregando"),
            uiOutput("visualizacaoIndicadorUI"),
+           br(),
            uiOutput("indicadoresExtraUI")
            #)
     

@@ -1,0 +1,12 @@
+name: visesp
+title: visesp
+username:
+account: joaoamorais
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 1321710
+bundleId: 2519192
+url: https://joaoamorais.shinyapps.io/visesp/
+when: 1571628995.51292
+asMultiple: FALSE
+asStatic: FALSE

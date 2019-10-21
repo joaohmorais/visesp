@@ -2,10 +2,13 @@ library(shiny)
 library(markdown)
 library(shinyjs)
 library(DT)
+library(leaflet)
 library(shinyWidgets)
 
 source("home.R")
 source("indicadores.R")
+source("regioes_tab.R")
+
 
 navbarPage(
   id = "navbarTabs",
@@ -19,5 +22,10 @@ navbarPage(
     "Indicadores",
     indicadores,
     icon = icon("list")
+  ),
+  tabPanel(
+    "Regiões",
+    regioes,
+    icon = icon("map")
   )
 )
