@@ -17,11 +17,6 @@ library(plotly)
 matriz <- tabnet_index()
 print(matriz)
 
-# print(head(sp_cities))
-# print(head(sp_rras))
-# print(head(sp_reg_saude))
-# print(head(sp_drs))
-
 indicador_ativo <- reactiveValues()
 indicador_reg_ativo <- reactiveValues()
 ind_data <- reactiveValues(mun=NULL, reg=NULL, reg_cut=NULL)
@@ -37,13 +32,6 @@ function(input, output, session) {
     return (length(matriz$Nomes))
   })
   
-  output$visespLogo <- renderImage({
-    filename <- normalizePath(file.path('./www/visesp_2.png'))
-    
-    list(src = filename,
-         alt = "VISESP")
-    
-  }, deleteFile = FALSE)
   
   output$homeUI <- renderUI({
     req(matriz$Nomes)
@@ -51,104 +39,148 @@ function(input, output, session) {
     print(numIndicadores)
     print("ok")
     tagList(
-      fluidRow(img(src='visesp_2.png', align = "center", height = "200px"), align="center"),
+      fluidRow(
+        img(
+          src = 'visesp_2.png',
+          align = "center",
+          height = "200px"
+        ),
+        align = "center"
+      ),
+      fluidRow(
+        column(
+          4,
+          wellPanel(
+            id = "painelNumIndicadores",
+            tagList(h1(numIndicadores),
+                    h3("Indicadores")),
+            style = paste0(
+              "
+              cursor: pointer;
+              background-color: ",
+              "#FFB819",
+              ";
+              text-align: center;
+              color: #FFFFFF
+              "
+            )
+            )
+            ),
+        column(
+          4,
+          wellPanel(
+            id = "painelNumMunicipios",
+            tagList(h1("646"),
+                    h3("Municípios")),
+            style = paste0(
+              "
+              cursor: pointer;
+              background-color: ",
+              "#FFB000",
+              ";
+              text-align: center;
+              color: #FFFFFF
+              "
+            )
+            )
+            ),
+        column(
+          4,
+          wellPanel(
+            id = "painelNumRegioes",
+            tagList(h1("97"),
+                    h3("Regiões")),
+            style = paste0(
+              "
+              cursor: pointer;
+              background-color: ",
+              "#FFB819",
+              ";
+              text-align: center;
+              color: #FFFFFF
+              "
+            )
+            )
+            )
+            ),
+      
       fluidRow(
         column(4,
                wellPanel(
-                 id = "painelNumIndicadores",
                  tagList(
-                   h1(numIndicadores),
-                   h3("Indicadores")
+                   img(
+                     src = "sp_white.png",
+                     height = "50%",
+                     width = "50%",
+                     align = "center"
+                   ),
+                   h2("Regiões")
                  ),
-                 style = paste0("
-                 cursor: pointer;
-                 background-color: ", "#FFB819", ";
-                 text-align: center;
-                 color: #FFFFFF
-                 ")
-               )
-               ),
+                 style = paste0(
+                   "
+                   cursor: pointer;
+                   background-color: ",
+                   "#33147F",
+                   ";
+                   text-align: center;
+                   color: #FFFFFF;
+                   "
+                 ),
+                 id = "painelRegioes"
+                 )),
+        column(
+          4,
+          wellPanel(
+            tagList(
+              img(
+                src = "line-chart.png",
+                height = "50%",
+                width = "50%",
+                align = "center"
+              ),
+              h2("Indicadores")
+            ),
+            style = paste0(
+              "
+              cursor: pointer;
+              background-color:",
+              "#3B12A1",
+              ";
+              text-align: center;
+              color: #FFFFFF;
+              "
+            ),
+            id = "painelIndicadores"
+            )
+          ),
         column(4,
                wellPanel(
-                 id = "painelNumMunicipios",
+                 id = "painelPlanilha",
                  tagList(
-                   h1("646"),
-                   h3("Municípios")
+                   img(
+                     src = "spreadsheet.png",
+                     height = "50%",
+                     width = "50%",
+                     align = "center"
+                   ),
+                   h2("Tabelas")
                  ),
-                 style = paste0("
+                 style = paste0(
+                   "
                  cursor: pointer;
-                 background-color: ", "#FFB000", ";
-                 text-align: center;
-                 color: #FFFFFF
-                 ")
-             )
-             ),
-      column(4,
-             wellPanel(
-               id = "painelNumRegioes",
-               tagList(
-                 h1("97"),
-                 h3("Regiões")
-               ),
-               style = paste0("
-               cursor: pointer;
-               background-color: ", "#FFB819", ";
-               text-align: center;
-               color: #FFFFFF
-               "
-             ))
-             )
-    ),
-    
-    fluidRow(
-      column(4,
-             wellPanel(
-               tagList(
-                 img(src = "sp_white.png", height="50%", width="50%", align="center"),
-                 h2("Regiões")
-               ),
-               style = paste0("
-                 cursor: pointer;
-                 background-color: ", "#33147F", ";
+                 background-color:",
+                   "#291067",
+                   ";
                  text-align: center;
                  color: #FFFFFF;
                  "
-             ),
-             id = "painelRegioes")
-             ),
-      column(4,
-             wellPanel(
-               tagList(
-                 img(src = "line-chart.png", height="50%", width="50%", align="center"),
-                 h2("Indicadores")
-               ),
-               style = paste0("
-                 cursor: pointer;
-                 background-color:", "#3B12A1", ";
-                 text-align: center;
-                 color: #FFFFFF;
-                 "),
-               id = "painelIndicadores"
-             )
-      ),
-      column(4,
-             wellPanel(
-               id = "painelPlanilha",
-               tagList(
-                 img(src = "spreadsheet.png", height="50%", width="50%", align="center"),
-                 h2("Tabelas")
-               ),
-               style = paste0("
-                 cursor: pointer;
-                 background-color:", "#291067",";
-                 text-align: center;
-                 color: #FFFFFF;
-                 ")
-             )
-      )
-    )
-  )
-})
+                 )
+               ))
+          )
+        )
+  })
+  
+  #onClick functions
   
   shinyjs::onclick("painelIndicadores",
                    updateTabsetPanel(session, "navbarTabs", selected = "Indicadores")
@@ -175,10 +207,12 @@ function(input, output, session) {
   }
   )
   
+  
+  
   output$tabelaListaIndicadores <- DT::renderDataTable({
     req(matriz$Nomes)
     tab <- as.data.frame(matriz$Nomes[-1])
-    colnames(tab) <- c("Lista de Indicadores")
+    colnames(tab) <- c("Lista de Indicadores TABNET")
     tab
   },
   extensions = 'FixedHeader',
@@ -191,64 +225,6 @@ function(input, output, session) {
   ),
   style = 'bootstrap'
   )
-  
-  # output$tabelaListaIndicadoresReg <- DT::renderDataTable({
-  #   req(matriz$Nomes)
-  #   tab <- as.data.frame(matriz$Nomes[-1])
-  #   colnames(tab) <- c("Lista de Indicadores")
-  #   tab
-  # },
-  # extensions = 'FixedHeader',
-  # selection = "single", options = list(
-  #   language = list(url = "//cdn.datatables.net/plug-ins/1.10.11/i18n/Portuguese-Brasil.json"),
-  #   dom = c('ft'),
-  #   pageLength = length(matriz$Nomes),
-  #   fixedHeader = TRUE,
-  #   cursor = "pointer"
-  # ),
-  # style = 'bootstrap'
-  # )
-  
-  output$tabelaListaRegioes <- DT::renderDataTable({
-    req(input$selecRegiao)
-    tab <- as.data.frame(switch(input$selecRegiao, 
-                  "DRS" = drs_list[,2],
-                  "Região de Saúde" = reg_saude_list[,2],
-                  "RRAS" = rras_list[,2]
-                  
-                  ))
-    colnames(tab) <- c(paste0("Lista de ", switch(input$selecRegiao, 
-                                                  "DRS" = "DRS's",
-                                                  "Região de Saúde" = "regiões de saúde",
-                                                  "RRAS" = "RRAS's"
-    )))
-    tab
-  },
-  extensions = 'FixedHeader',
-  selection = list(mode="single", selected = 1), options = list(
-    language = list(url = "//cdn.datatables.net/plug-ins/1.10.11/i18n/Portuguese-Brasil.json"),
-    dom = c('ft'),
-    rownames = FALSE,
-    pageLength = 63,
-    fixedHeader = TRUE,
-    cursor = "pointer"
-  ),
-  style = 'bootstrap'
-  )
-  
-  # observeEvent(input$navbarTabs, {
-  #   if (input$navbarTabs == "Indicadores") {
-  #     toggleDropdownButton("dropButtonIndicadores")
-  #   }
-  # })
-  
-  
-  observeEvent(input$tabelaListaIndicadores_rows_selected, 
-               {
-                 # req(matriz$Links)
-                 # indicador_ativo <<- make_tabnet_obj(matriz$Links[input$tabelaListaIndicadores_rows_selected])
-                 # print(indicador_ativo)
-               })
   
   output$conteudoIndicadoresUI <- renderUI({
     req(matriz$Nomes, matriz$Links)
@@ -453,7 +429,7 @@ function(input, output, session) {
   
   output$painelCondicionalSelecione <- renderUI({
     if (!isTRUE(input$tabelaListaIndicadores_rows_selected > 0)){
-      tags <- tagList(helpText("Selecione um indicador clicando no botão à esquerda!", align="center"))
+      tags <- tagList(helpText("Selecione algum indicador clicando no botão à esquerda!", align="center"))
     } else {
       tags <- tagList()
     }
@@ -488,10 +464,6 @@ function(input, output, session) {
       tags <- tagList()
     }
     tags
-  })
-  
-  output$plot <- renderPlot({
-    ggplot(data=iris, aes(x=Species, y=Sepal.Length)) + geom_boxplot()
   })
   
   output$plotBarrasMaioresValores <- renderPlot({
@@ -758,14 +730,17 @@ function(input, output, session) {
       
       print(head(plotData))
       plotData$Região <- paste0(plotData$Nome, "\nAno: ", plotData$Ano, "\nValor: ", plotData$Valor)
-      
-      g <- ggplot(data=plotData, aes(x=Ano, y=Valor, group=as.factor(Nome), color = as.factor(Nome),
-                                     label = Região)) + 
-        geom_line(size=1) + geom_point(size=1.2) + 
-        labs(color = region) + 
+      plotData$Nome <- as.factor(plotData$Nome)
+      g <- ggplot(data=plotData, aes(x=Ano, y=Valor, group=Nome, color = Nome,
+                                     linetype = Nome,
+                                     shape = Nome,
+                                     tooltip_label = Região)) + 
+        geom_line(size=1, show.legend = FALSE) + geom_point(size=1.2, show.legend = FALSE) + 
+        labs(color = region, fill = region) + 
         ylab(indicador_ativo$NomesIndicadores[as.integer(input$selecInd)]) +
+        xlab("") +
         theme(panel.grid.major.x = element_blank(), panel.grid.minor.x = element_blank(), 
-              axis.text.x = element_text(angle=75))
+              axis.text.x = element_text(angle=90))
       
       
     }
@@ -774,28 +749,45 @@ function(input, output, session) {
   })
   
   graficoBarrasIndicadoresPlot <- reactive({
+    req(is.logical(input$graficoBarraLabels))
+    req(is.logical(input$graficoBarraOrder))
+    req(is.logical(input$graficoBarraEixo))
     g <- NULL
     plotData <- getIndicadoresRegiaoPlotData()
     if (dim(plotData)[1] > 0) {
-      maxYear <- max(as.numeric(as.character(plotData$Ano)))
-      plotData <- plotData[as.numeric(as.character(plotData$Ano)) == maxYear,]
+      maxYear <- max(as.numeric(as.character(plotData$Ano))) #faz só do ano mais recente
+      plotData <- plotData[as.numeric(as.character(plotData$Ano)) == maxYear,] #yearCut
       region <- colnames(plotData)[2]
-      colnames(plotData)[2] <- c("Nome")
+      colnames(plotData)[2] <- c("Nome") #padronizar
       
       print(head(plotData))
       plotData$Região <- paste0(plotData$Nome, "\nAno: ", plotData$Ano, "\nValor: ", plotData$Valor)
       
-      g <- ggplot(data=plotData, aes(x=as.factor(Nome), y=Valor, fill = as.factor(Nome),
-                                     label = Região)) + 
-        geom_bar(stat="identity", width = 0.9) + 
+      if (input$graficoBarraOrder) {
+        plotData$Nome <- factor(plotData$Nome, levels = plotData$Nome[order(plotData$Valor)])
+      }
+      g <- ggplot(data=plotData, aes(x=as.factor(Nome), y=Valor, fill = Valor,
+                                     tooltip_label = Região)) +
+        geom_bar(stat="identity", width = 0.6, position = 'dodge', color = "white") + 
         ggtitle(paste0(indicador_ativo$NomesIndicadores[as.integer(input$selecInd)], ", por ", 
                        region, ", em ", maxYear)) + 
         ylab(indicador_ativo$NomesIndicadores[as.integer(input$selecInd)]) +
-        xlab(region) +
+        xlab("") +
+        scale_fill_gradient(low = '#FFd370', high = '#FFB000') +
         theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
-              legend.title = element_blank(), legend.position = "none")
+              legend.title = element_blank(), legend.position = "none", 
+              panel.background = element_rect(fill = '#FFF9EC')) 
+      if (input$graficoBarraEixo) {
+        g <- g + coord_flip()
+      }
+      
       if (length(unique(plotData$Nome)) > 6) {
         g <- g + theme(axis.text.x = element_text(angle=90))
+      }
+      
+      if (input$graficoBarraLabels) {
+        g <- g + geom_text(aes(label=Valor), size = 3.5, nudge_y = 0.5) +
+          ylim(0, 1.2*max(plotData$Valor))
       }
     }
     
@@ -803,16 +795,26 @@ function(input, output, session) {
   })
   
   output$graficoSelecaoIndicadores <- renderPlotly({
+    gp <- NULL
     req(input$tipoGrafico)
-    g <- switch (input$tipoGrafico,
-      "Linhas" = graficoLinhasIndicadoresPlot(),
-      "Barras" = graficoBarrasIndicadoresPlot()
-    )
-    if (!is.null(g)) {
-      ggplotly(g, tooltip = "label") %>% config(displayModeBar = FALSE)
+    if (input$tipoGrafico == "Barras") {
+      req(is.logical(input$graficoBarraEixo))
+      g <- graficoBarrasIndicadoresPlot()
+      if (!is.null(g)) {
+        gp <- ggplotly(g, tooltip = "tooltip_label") %>% config(displayModeBar = FALSE)
+        if (input$graficoBarraEixo) {
+          gp <- gp %>% style(textposition = "right")
+        }
+      }
+    } else {
+      g <- graficoLinhasIndicadoresPlot()
+      if (!is.null(g)) {
+        gp <- ggplotly(g, tooltip = "tooltip_label") %>% config(displayModeBar = FALSE)
+      }
     }
     
     
+    gp
   })
   
   output$visualizacaoIndicadorUI <- renderUI({
@@ -843,7 +845,7 @@ function(input, output, session) {
                                ),
                         column(9, 
                                radioGroupButtons("tipoGrafico", "Gráfico", choices = c("Linhas", "Barras")),
-                               plotlyOutput("graficoSelecaoIndicadores"),
+                               uiOutput("graficoSelecaoIndicadoresUI"),
                                downloadBttn("botaoDownloadGraficoLinhas", "Baixar Gráfico", style = "minimal"),
                                align="center"
                                )
@@ -855,6 +857,48 @@ function(input, output, session) {
     
     tags
     
+  })
+  
+  output$graficoSelecaoIndicadoresUI <- renderUI({
+    req(input$selecRegiaoLinha)
+    req(input$tipoGrafico)
+    tags <- NULL
+    if (input$tipoGrafico == "Barras") {
+      n <- length(input$selecRegiaoLinha)
+      tags <- tagList(
+        fluidRow(
+        column(4, 
+               awesomeCheckbox(
+                 inputId = "graficoBarraEixo",
+                 label = "Eixos invertidos", 
+                 value = TRUE,
+                 status = "info"
+               )
+               ),
+        column(4, 
+               awesomeCheckbox(
+                 inputId = "graficoBarraLabels",
+                 label = "Mostrar valores no gráfico", 
+                 value = TRUE,
+                 status = "info"
+               )
+               ),
+        column(4, 
+               awesomeCheckbox(
+                 inputId = "graficoBarraOrder",
+                 label = "Ordenar por valor", 
+                 value = TRUE,
+                 status = "info"
+               )
+               )
+        ),
+        plotlyOutput("graficoSelecaoIndicadores", height = 300 + 25*n),
+        helpText("Para o gráfico de barras, apenas o ano mais recente entre os selecionados será considerado.")
+      )
+    } else {
+      tags <- plotlyOutput("graficoSelecaoIndicadores", height = "100%")
+    }
+    tags
   })
   
   output$selecaoRegiaoGraficoUI <- renderUI({
@@ -873,21 +917,45 @@ function(input, output, session) {
     )
     tags <- wellPanel(
       h4(strong(paste0("Seleção de ", regions))),
-      pickerInput(
+      selectizeInput(
         inputId = "selecRegiaoLinha",
         label = "", 
         choices = regioes,
-        options = list(
-          `actions-box` = TRUE,
-          `deselect-all-text` = "Limpar seleção",
-          `select-all-text` = "Selecionar tudo"), 
         multiple = TRUE,
+        options = list(plugins= list('remove_button')),
         selected = (ind_data$mun$id)[c(1:3)]
+      ),
+      fluidRow(
+        column(6, 
+               actionBttn(
+                 inputId = "selecRegiaoLinhaAll",
+                 label = "Selecionar tudo",
+                 style = "simple", 
+                 color = "primary",
+                 size = "sm"
+               )
+               )
       )
     )
     
     tags
     
+  })
+  
+  observeEvent(input$selecRegiaoLinhaAll, {
+    updateSelectizeInput(
+      session,
+      "selecRegiaoLinha",
+      selected = (ind_data$mun$id)[c(1:length(ind_data$mun$id))]
+    )
+  })
+  
+  observeEvent(input$selecRegiaoLinhaAll, {
+    updateSelectizeInput(
+      session,
+      "selecRegiaoLinha",
+      selected = c()
+    )
   })
   
   output$boxResumoSelecaoUI <- renderUI({
@@ -906,50 +974,53 @@ function(input, output, session) {
     cutData <- ind_data$mun[ind_data$mun$Ano %in% indicador_ativo$Anos[as.integer(input$selecAno)]
                             & ind_data$mun$id %in% input$selecRegiaoLinha
                             ,]
-    
-    
-    min <- cutData[cutData$Valor == min(cutData$Valor, na.rm = TRUE),]
-    colnames(min) <- c("id", "Região", "Ano", "Valor")
-    qtd_min <- dim(min)[1]
-    if (qtd_min > 1 & length(unique(min$Região)) > 1) {
-      min_year <- (names(table(min$Ano))[table(min$Ano) == max(table(min$Ano))])[1]
-      print(min_year)
-      min <- min[min$Ano == min_year,]
-      qtd_min <- nrow(min)
-      min$Região[1] <- paste0("Em ", qtd_min, " ", regions)
-    }
-    max <- cutData[cutData$Valor == max(cutData$Valor, na.rm = TRUE),]
-    qtd_max <- dim(max)[1]
-    colnames(max) <- c("id", "Região", "Ano", "Valor")
-    if (qtd_max > 1 & length(unique(max$Região)) > 1) {
-      max_year <- (names(table(max$Ano))[table(max$Ano) == max(table(max$Ano))])[1]
-      max <- max[max$Ano == max_year,]
-      qtd_max <- nrow(max)
-      max$Região[1] <- paste0("em ", qtd_max, " ", regions)
-    }
-    
-    tags <- tagList(
-      wellPanel(
-        h4("Valor máximo"),
-        h2(round(max$Valor[1], 2)),
-        h4(paste0(max$Região[1], ", ", max$Ano[1])),
-        style = paste0("
+    tags <- NULL
+    cutData <- cutData[!is.na(cutData$Valor),]
+    if (dim(cutData)[1] > 0) {
+      min <- cutData[cutData$Valor == min(cutData$Valor, na.rm = TRUE),]
+      colnames(min) <- c("id", "Região", "Ano", "Valor")
+      qtd_min <- dim(min)[1]
+      if (qtd_min > 1 & length(unique(min$Região)) > 1) {
+        min_year <- (names(table(min$Ano))[table(min$Ano) == max(table(min$Ano))])[1]
+        print(min_year)
+        min <- min[min$Ano == min_year,]
+        qtd_min <- nrow(min)
+        min$Região[1] <- paste0("Em ", qtd_min, " ", regions)
+      }
+      max <- cutData[cutData$Valor == max(cutData$Valor, na.rm = TRUE),]
+      qtd_max <- dim(max)[1]
+      colnames(max) <- c("id", "Região", "Ano", "Valor")
+      if (qtd_max > 1 & length(unique(max$Região)) > 1) {
+        max_year <- (names(table(max$Ano))[table(max$Ano) == max(table(max$Ano))])[1]
+        max <- max[max$Ano == max_year,]
+        qtd_max <- nrow(max)
+        max$Região[1] <- paste0("em ", qtd_max, " ", regions)
+      }
+      
+      tags <- tagList(
+        wellPanel(
+          h4("Valor máximo"),
+          h2(round(max$Valor[1], 2)),
+          h4(paste0(max$Região[1], ", ", max$Ano[1])),
+          style = paste0("
                  background-color: ", "#2B0095", ";
                  text-align: center;
                  color: #FFFFFF
                  ")
-      ),
-      wellPanel(
-        h4("Valor mínimo"),
-        h2(round(min$Valor[1], 2)),
-        h4(paste0(min$Região[1], ", ",  min$Ano[1])),
-        style = paste0("
+        ),
+        wellPanel(
+          h4("Valor mínimo"),
+          h2(round(min$Valor[1], 2)),
+          h4(paste0(min$Região[1], ", ",  min$Ano[1])),
+          style = paste0("
                  background-color: ", "#D99500", ";
                  text-align: center;
                  color: #FFFFFF
                  ")
+        )
       )
-    )
+    }
+    
     
     tags
   })
@@ -967,7 +1038,9 @@ function(input, output, session) {
                         br(),
                         column(6,
                                wellPanel(h4(strong(indicador_ativo$Nome)),
-                                         p(indicador_ativo$Info)
+                                         HTML(paste0("<p>", paste(indicador_ativo$Info, collapse = '<br/>'),"</p>")),
+                                         HTML(paste0('<a href="', indicador_ativo$url, '">Ver no TABNET</a>'))
+                                         #p(indicador_ativo$Info)
                                          )
                         ),
                         column(6, 
@@ -1094,7 +1167,7 @@ function(input, output, session) {
                    "Linhas" = graficoLinhasIndicadoresPlot(),
                    "Barras" = graficoBarrasIndicadoresPlot()
       )
-      ggsave(file, g, width = 16, height = 10.4)
+      ggsave(file, g)
     }
   )
   
@@ -1108,24 +1181,6 @@ function(input, output, session) {
   }
   )
   
-  # observeEvent(input$tabelaListaRegioes_rows_selected, {
-  #   print(input$tabelaListaRegioes_rows_selected)
-  #   regionCut <- regionalizacao[,c(2, switch (input$selecRegiao,
-  #     "DRS" = 4,
-  #     "Região de Saúde" = 8,
-  #     "RRAS" = 6
-  #   ))]
-  #   #print(head(regionCut))
-  #   list <- switch(input$selecRegiao,
-  #                  "DRS" = drs_list,
-  #                  "Região de Saúde" = reg_saude_list,
-  #                  "RRAS" = rras_list)
-  #   print(head(list))
-  #   reg_id <- list[input$tabelaListaRegioes_rows_selected, 1]
-  #   print(head(reg_id))
-  #   regions$muns_selected <<- regionCut[regionCut[,2] == reg_id, 1]
-  #   print(regions$muns_selected)
-  # })
   
   
   output$selectSubIndRegUI <- renderUI({
