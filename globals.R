@@ -21,6 +21,7 @@ positron_no_labels <- "//{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}
 
 s_tabnet_df_retrieval <- safely(tabnet_df_retrieval)
 s_make_tabnet_obj <- safely(make_tabnet_obj)
+s_bins <- safely(binr::bins)
 
 #color schemes
 scheme_1 <- NULL

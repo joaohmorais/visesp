@@ -18,12 +18,16 @@ matriz <- tabnet_index()
 print(matriz)
 
 indicador_ativo <- reactiveValues()
-indicador_reg_ativo <- reactiveValues()
-ind_data <- reactiveValues(mun=NULL, reg=NULL, reg_cut=NULL)
+ind_data <- reactiveValues(mun=NULL, reg=NULL, reg_cut=NULL, reg_id = "none")
 line_selected <- reactiveValues(id=2)
 cache <- reactiveValues(dash_year=NULL, linha_year = NULL, barra_year = NULL)
-regions <- reactiveValues(muns_selected = NULL)
-trigger <- reactiveValues(triggered = FALSE, region_id = NULL)
+
+
+#regions
+indicador_reg_ativo <- reactiveValues(id = NULL)
+regions <- reactiveValues(muns = NULL, region_id = NULL, regionNames = NULL, currentRegion = -1)
+trigger <- reactiveValues(triggered = FALSE, regionId = NULL)
+ind_reg_index <- reactiveValues(ind = NULL, sub_ind = NULL, year=NULL)
 
 function(input, output, session) {
   
@@ -176,7 +180,44 @@ function(input, output, session) {
                  "
                  )
                ))
+          ),
+      fluidRow(
+        column(8,
+               wellPanel(
+                 h4(strong("Sobre")),
+                 style = paste0(
+                   "background-color:",
+                   "#7AC8D7",
+                   ";
+                 "
+                 )
+               )
+               ),
+        column(4, 
+        wellPanel(
+          id = "painelComoUsar",
+          tagList(
+            img(
+              src = "information.png",
+              height = "50%",
+              width = "50%",
+              align = "center"
+            ),
+            h2("Como usar")
+          ),
+          style = paste0(
+            "
+                 cursor: pointer;
+                 background-color:",
+            "#328EA0",
+            ";
+                 text-align: center;
+                 color: #FFFFFF;
+                 "
           )
+        ))
+        
+      )
         )
   })
   
@@ -204,6 +245,11 @@ function(input, output, session) {
   )
   shinyjs::onclick("painelNumRegioes",{
     updateTabsetPanel(session, "navbarTabs", selected = "Regiões")
+  }
+  )
+  
+  shinyjs::onclick("painelComoUsar",{
+    updateTabsetPanel(session, "navbarTabs", selected = "Como usar")
   }
   )
   
@@ -740,6 +786,8 @@ function(input, output, session) {
         ylab(indicador_ativo$NomesIndicadores[as.integer(input$selecInd)]) +
         xlab("") +
         theme(panel.grid.major.x = element_blank(), panel.grid.minor.x = element_blank(), 
+              panel.grid.major.y = element_line(color = "gray"),
+              panel.background = element_rect(fill = "#FFFFFF"),
               axis.text.x = element_text(angle=90))
       
       
@@ -901,41 +949,144 @@ function(input, output, session) {
     tags
   })
   
+  observeEvent(input$refreshSelecRegiaoLinha, {
+    req(input$selPerRegKind)
+    req(input$selectPerReg)
+    req(input$selectPerRegMuns)
+    print(input$selectPerRegMuns)
+    
+    updateSelectizeInput(session, "selecRegiaoLinha", selected = input$selectPerRegMuns)
+    toggleDropdownButton("dropdownRegMunSelec")
+  })
+  
+  output$selectizePerRegUI <- renderUI({
+    req(input$selPerRegKind)
+    req(input$selectPerReg)
+    cut <- switch(input$selPerRegKind, 
+                  "DRS" = regionalizacao[,c(2, 3, 4)],
+                  "Região de Saúde" = regionalizacao[,c(2, 3, 8)],
+                  "RRAS" = regionalizacao[,c(2, 3, 6)]
+                  )
+    colnames(cut)[3] <- c("cod_reg")
+    cut <- cut[cut$cod_reg == input$selectPerReg,]
+    names <- setNames(cut$cod_mun, cut$mun)
+    selectizeInput("selectPerRegMuns", "Municípios", choices = names, multiple = TRUE, selected = names)
+    
+  })
+  
+  output$selPerRegMunsUI <- renderUI({
+    req(input$selPerRegKind)
+    choices <- switch(input$selPerRegKind, 
+                      "DRS" = regionalizacao[,c(4, 5)],
+                      "Região de Saúde" = regionalizacao[,c(8, 9)],
+                      "RRAS" = regionalizacao[,c(6, 7)]
+                      )
+    colnames(choices) <- c("cod", "name")
+    choices <- choices[order(choices$cod),]
+    names <- setNames(choices$cod, choices$name)
+    selectInput("selectPerReg", label = "", choices = names)
+  })
+  
   output$selecaoRegiaoGraficoUI <- renderUI({
     req(input$tabelaListaIndicadores_rows_selected)
     req(ind_data$ind == input$tabelaListaIndicadores_rows_selected)
     req(ind_data$mun)
     req(input$selecLinha)
     req(input$selecInd)
-    regioes <- setNames(unique(ind_data$mun$id), unique((ind_data$mun)[,2]))
-    regions <- switch(colnames(ind_data$mun)[2], 
-                      "Município" = "Municípios",
-                      "DRS" = "DRS's",
-                      "RRAS" = "RRAS's",
-                      "Região.de.Saúde" = "Regiões de saúde",
-                      "Regiões.Saúde" = "Regiões de saúde"
+    regioes <-
+      setNames(unique(ind_data$mun$id), unique((ind_data$mun)[, 2]))
+    regions <- switch(
+      colnames(ind_data$mun)[2],
+      "Município" = "Municípios",
+      "DRS" = "DRS's",
+      "RRAS" = "RRAS's",
+      "Região.de.Saúde" = "Regiões de saúde",
+      "Regiões.Saúde" = "Regiões de saúde"
     )
-    tags <- wellPanel(
-      h4(strong(paste0("Seleção de ", regions))),
-      selectizeInput(
-        inputId = "selecRegiaoLinha",
-        label = "", 
-        choices = regioes,
-        multiple = TRUE,
-        options = list(plugins= list('remove_button')),
-        selected = (ind_data$mun$id)[c(1:3)]
-      ),
-      fluidRow(
-        column(6, 
-               actionBttn(
-                 inputId = "selecRegiaoLinhaAll",
-                 label = "Selecionar tudo",
-                 style = "simple", 
-                 color = "primary",
-                 size = "sm"
-               )
-               )
+    selecRegiaoLinhaUI <- NULL
+    if (regions == "Municípios") {
+      selecRegiaoLinhaUI <- tagList(
+        h4(strong(paste0(
+          "Seleção de ", regions
+        ))),
+        selectizeInput(
+          inputId = "selecRegiaoLinha",
+          label = "",
+          choices = regioes,
+          multiple = TRUE,
+          options = list(plugins = list('remove_button')),
+          selected = (ind_data$mun$id)[c(1:3)]
+        ),
+        fluidRow(br(),
+                 column(
+                   6,
+                   dropdown(
+                     fluidRow(strong("Selecionar municípios por Região")),
+                     fluidRow(column(
+                       6,
+                       selectInput(
+                         "selPerRegKind",
+                         "",
+                         choices = c("DRS", "Região de Saúde", "RRAS"),
+                         selected = "DRS"
+                       )
+                     ),
+                     column(6,
+                            uiOutput(
+                              "selPerRegMunsUI"
+                            ))),
+                     fluidRow(
+                       uiOutput("selectizePerRegUI")
+                     ),
+                     actionBttn(
+                       "refreshSelecRegiaoLinha",
+                       label = "Selecionar",
+                       style = "simple",
+                       color = "success",
+                       size = "sm"
+                     ),
+                     label = "Selecionar por Região",
+                     width = "600px",
+                     id = "dropdownRegMunSelec"
+                   )
+                 ))
+        
       )
+    } else {
+      selecRegiaoLinhaUI <- tagList(
+        h4(strong(paste0(
+          "Seleção de ", regions
+        ))),
+        selectizeInput(
+          inputId = "selecRegiaoLinha",
+          label = "",
+          choices = regioes,
+          multiple = TRUE,
+          options = list(plugins = list('remove_button')),
+          selected = (ind_data$mun$id)[c(1:3)]
+        ),
+        br(),
+        fluidRow(column(
+          6,
+          actionBttn(
+            inputId = "selecRegiaoLinhaAll",
+            label = "Selecionar tudo",
+            style = "simple",
+            color = "primary",
+            size = "sm"
+          )
+        ))
+      )
+    }
+    
+    
+    
+    if (regions == "Municípios") {
+      
+    }
+    
+    tags <- wellPanel(
+      selecRegiaoLinhaUI
     )
     
     tags
@@ -1171,114 +1322,55 @@ function(input, output, session) {
     }
   )
   
-  observeEvent(input$selecIndReg, {
-    print(input$selecIndReg)
-    response <- s_make_tabnet_obj(matriz$Links[as.integer(input$selecIndReg)])
-    if (is.null(response$error)) {
-      indicador_reg_ativo <<- response$result
-    }
-    print(response$error)
-  }
-  )
-  
-  
-  
-  output$selectSubIndRegUI <- renderUI({
-    req(input$selecIndRegLive)
-    req(indicador_reg_ativo$Info)
-    subinds <- indicador_reg_ativo$NomesIndicadores
-    print(subinds)
-    pickerInput("selectSubIndReg", 
-                label = "Sub-Indicador", 
-                choices = setNames(1:length(subinds), subinds), 
-                selected = length(subinds)
-                )
-  })
-  
-  output$dropdownRegioesUI <- renderUI({
-    tagList(
-    tags$style(".btn-custom {background-color: #310D87; color: #FFF;}"),
-    column(1, 
-           dropdown(
-             # wellPanel(style = "overflow-y:scroll; height:300px",
-             # h5("Seleção de Indicadores"),
-             # column(9,
-             #                  DT::dataTableOutput("tabelaListaIndicadoresReg")),
-             # column(3,
-             #        uiOutput("selectSubIndReg")
-             #        )
-             # ),
-             column(6, 
-                    pickerInput(
-                      inputId = "selecIndRegLive",
-                      label = "Indicador", 
-                      choices = setNames(2:length(matriz$Nomes), matriz$Nomes[-1]),
-                      options = list(
-                        `live-search` = TRUE)
-                    )
-             ),
-             column(6, 
-                    uiOutput("selectSubIndRegUI")),
-             circle = TRUE, status = "custom", icon = icon("list"), width = "600px",tooltip = tooltipOptions(title = "Clique para ver os indicadores."))
-    ),
-    column(11, 
-           uiOutput("tituloIndicadorReg"), align="center"
-    )
-    )
-  })
-  
-  # output$selecIndRegioesUI <- renderUI({
-  #   selectInput("selectIndRegioes", "Indicador", choices = setNames(c(2:length(matriz$Nomes)), matriz$Nomes[-1]))
-  # })
+  ###################  VISUALIZAÇÃO POR REGIÕES  ##########################################
   
   output$nomeRegioesTabUI <- renderUI({
-    req(input$selecRegiaoKind)
-    h3(strong(paste0("Visualização por ", input$selecRegiaoKind)))
+    input$selecRegiaoKind
+    title <- ifelse(is.null(input$selecRegiaoKind),
+                    "Visualização por Região",
+                    paste0("Visualização por ", input$selecRegiaoKind)
+                    )
+    h3(strong(title))
   })
   
-  output$tituloIndicadorReg <- renderUI({
-    input$selectSubIndReg
-    req(input$tabelaListaRegioes_rows_selected)
-    tags <- NULL
-    if (is.null(input$selectSubIndReg)) {
-      tags <- helpText("Selecione um indicador clicando no botão.")
-    } else {
-      req(input$selectSubIndReg)
-      list <- switch(input$selecRegiao,
-                     "DRS" = drs_list,
-                     "Região de Saúde" = reg_saude_list,
-                     "RRAS" = rras_list)
-      tags <- h4(paste0(indicador_reg_ativo$NomesIndicadores[as.integer(input$selectSubIndReg)], 
-             " em ", list[input$tabelaListaRegioes_rows_selected,2]))
-      
-    }
-    tags
+  observeEvent(input$selecRegiaoKind, {
+    regions$regionNames <<- switch (input$selecRegiaoKind,
+                            "DRS" = setNames(drs_list[,1], drs_list[,2]),
+                            "Região de Saúde" = setNames(reg_saude_list[,1], reg_saude_list[,2]),
+                            "RRAS" = setNames(rras_list[,1] - 3500, rras_list[,2])
+    )
   })
+
+  observeEvent(regions$regionNames, {
+    regions$regionId <<- regions$regionNames[[1]]
+    print(regions$regionId)
+  })
+  
+  #selecRegiao
   
   output$selecRegiaoUI <- renderUI({
-    req(input$selecRegiaoKind)
-    regionNames <- switch (input$selecRegiaoKind,
-      "DRS" = setNames(drs_list[,1], drs_list[,2]),
-      "Região de Saúde" = setNames(reg_saude_list[,1], reg_saude_list[,2]),
-      "RRAS" = setNames(rras_list[,1], rras_list[,2])
-    )
-    
-    pickerInput(
-      inputId = "selecRegiao",
-      label = " ", 
-      choices = regionNames,
-      options = list(
-        `live-search` = TRUE)
+    name <- names(regions$regionNames)[regions$regionNames==regions$regionId]
+    dropdown(
+      fluidRow(
+        h4(strong(paste0("Seleção de ", input$selecRegiaoKind))),
+        pickerInput(
+          inputId = "selecRegiao",
+          choices = regions$regionNames,
+          selected = regions$regionId,
+          options = list(`live-search` = TRUE)
+        ),
+        helpText("Selecione uma região clicando no mapa abaixo."),
+        leafletOutput("leafletRegionSelect")
+      ),
+      tooltip = "Clique para trocar a região",
+      label = name,
+      align = "center",
+      id = "dropdownSelectReg",
+      width = "800px"
     )
   })
   
-  observeEvent(input$selecRegiao, 
-               print(input$selecRegiao)
-               )
-  
   output$leafletRegionSelect <- renderLeaflet({
-    req(input$selecRegiaoKind)
-    req(input$selecRegiao)
     geometry <- switch (input$selecRegiaoKind,
                         "DRS" = sp_drs,
                         "RRAS" = sp_rras,
@@ -1293,7 +1385,11 @@ function(input, output, session) {
     
     plotData <- merge(geometry, region_data, by="cod", all.x = TRUE)
     plotData$selected <- FALSE
-    plotData$selected[plotData$cod == input$selecRegiao] <- TRUE
+    if (input$selecRegiaoKind == "RRAS") {
+      plotData$cod <- plotData$cod - 3500
+    }
+    plotData$selected[plotData$cod == regions$regionId] <- TRUE
+    
     
     bounds <- st_bbox(plotData)
     
@@ -1330,390 +1426,370 @@ function(input, output, session) {
                     style = list("font-weight" = "normal", padding = "3px 8px"),
                     textsize = "15px",
                     direction = "auto"))
-    
-
-  })
-  
-  
-  observeEvent(input$mapaIndicadores_shape_click, {
-    event <- input$mapaIndicadores_shape_click$id
-    print( event )
-    if (colnames(ind_data$mun)[2] != "Município") {
-      region <- switch (colnames(ind_data$mun)[2],
-                        "DRS" = "DRS",
-                        "Região.de.Saúde" = "Região de Saúde",
-                        "RRAS" = "RRAS",
-                        "Regiões.Saúde" = "Região de Saúde"
-      )
-      updateNavbarPage(session, "navbarTabs", selected = "Regiões")
-      updateRadioGroupButtons(session, "selecRegiaoKind", selected = region)
-      trigger$region_id <<- event
-      trigger$triggered <<- TRUE
-      updatePickerInput(session, "selecRegiao", selected = event)
-      # updatePickerInput(session, "selecIndReg", input$tabelaListaIndicadores_rows_selected + 1)
-      # indicador_reg_ativo <<- indicador_ativo
-      # updateSelectInput(session, "selecSubIndReg", selected = input$selecInd)
-    }
-  })
-  
-  output$selecIndsRegiaoUI <- renderUI({
-    tagList(
-      column(6, uiOutput("selecIndRegiaoUI")),
-      column(6, uiOutput("selecSubIndRegUI"))
-      
-    )
   })
   
   observe({
     event <- input$leafletRegionSelect_shape_click$id
-    print( event )
-    updateSelectInput(session, "selecRegiao", selected = event)
-  })
-  
-  output$selecIndsRegiaoUI <- renderUI({
-    tagList(
-      column(6, uiOutput("selecIndRegiaoUI")),
-      column(6, uiOutput("selecSubIndRegUI"))
-      
-    )
-  })
-  
-  output$selecIndRegiaoUI <- renderUI({
-    req(matriz$Nomes)
-    pickerInput(
-      inputId = "selecIndReg",
-      choices = setNames(2:length(matriz$Nomes), matriz$Nomes[-1]),
-      options = list(`live-search` = TRUE)
-    )
-
-  })
-  
-  output$selecSubIndRegUI <- renderUI({
-    req(input$selecIndReg)
-    req(indicador_reg_ativo$Info)
-    subinds <- indicador_reg_ativo$NomesIndicadores
-    pickerInput(
-      "selecSubIndReg",
-      choices = setNames(1:length(subinds), subinds),
-      selected = length(subinds)
-    )
-  })
-
-  observeEvent(input$selecRegiaoKind, {
-    if (trigger$triggered) {
-      updatePickerInput(session, "selecRegiao", selected = trigger$region_id)
-      trigger$triggered <<- FALSE
-    }
+    print(event)
+    #updateSelectInput(session, "selecRegiao", selected = event)
+    regions$regionId <<- event
   })
   
   observeEvent(input$selecRegiao, {
-    req(input$selecRegiaoKind)
-    req(input$selecRegiao)
-    regionCut <- regionalizacao[,c(2, switch (input$selecRegiaoKind,
-                                              "DRS" = 4,
-                                              "Região de Saúde" = 8,
-                                              "RRAS" = 6
-    ))]
-    regions$muns_selected <<- regionCut[regionCut[,2] == input$selecRegiao, 1]
-    print(regions$muns_selected)
-    
-    req(ind_data$reg)
-    ind_data$reg_cut <<- ind_data$reg[ind_data$reg$id %in% regions$muns_selected,]
-    print(head(ind_data$reg_cut))
+    regions$regionId <<- input$selecRegiao
   })
   
   observeEvent({
-    input$selecIndReg
-    input$selecSubIndReg
-  }, {
-    
-    print("entrou")
-    
-    line_index <- which(indicador_reg_ativo$NomesLinhas == "Município")
-    
-    if (length(line_index) > 0) {
-      response <- s_tabnet_df_retrieval(indicador_reg_ativo, line_index = line_index, ind_index = as.integer(input$selecSubIndReg), timeout = 2)
-      if (is.null(response$error)) {
-        print("funfou")
-        ind_data$reg <<- response$result
-        ind_data$reg_cut <<- ind_data$reg[ind_data$reg$id %in% regions$muns_selected,]
-        print(head(ind_data$reg_cut))
-      } else {
-        sendSweetAlert(session = session, title = "Erro na conexão", 
-                       text = "Não foi possível conectar-se ao TABNET. Verifique sua conexão e tente novamente.",
-                       type = "error")
+    regions$regionId
+  },
+  {
+    print(paste0("munsByReg - ", regions$regionId, " / ", regions$currentRegion))
+    if (regions$currentRegion != regions$regionId | length(regions$muns) == 0) {
+      munsByReg <- regionalizacao[, c(2, switch (
+        input$selecRegiaoKind,
+        "DRS" = 4,
+        "Região de Saúde" = 8,
+        "RRAS" = 6
+      ))]
+      if (input$selecRegiaoKind == "RRAS") {
+        munsByReg[, 2] <- munsByReg[, 2] - 3500
       }
-    } else {
-      sendSweetAlert(session = session, title = "Erro com o indicador selecionado.", 
-                     text = "O indicador selecionado não possui visualização a nível de município.",
-                     type = "error")
-      print("O indicador selecionado não possui visualização a nível de município.")
+      muns_selected <- munsByReg[munsByReg[, 2] == regions$regionId, 1]
+      
+      
+      regions$muns <<- muns_selected
+      regions$currentRegion <<- regions$regionId
+      print(paste0(regions$muns))
     }
   })
   
-  # observeEvent(input$leafletRegionSelect_shape_click, {
-  #   event <- input$map_shape_click
-  #   print(event)
-  # })
+  #selecIndicador
   
-  output$tituloRegioesUI <- renderUI({
-    req(input$selecRegiaoKind)
-    req(input$selecRegiao)
-    req(input$selecSubIndReg)
-    req(indicador_reg_ativo$NomesIndicadores)
-    req(regions$muns_selected)
-    region_data <- switch (input$selecRegiaoKind,
-                           "DRS" = drs_list,
-                           "Região de Saúde" = reg_saude_list,
-                           "RRAS" = rras_list)
-    colnames(region_data) <- c("cod", "nome")
-    region_name <- region_data[region_data$cod == input$selecRegiao, 2]
-    numero <- length(regions$muns_selected)
-    title <- paste0(indicador_reg_ativo$NomesIndicadores[as.integer(input$selecSubIndReg)], 
-                    " em ", 
-                    region_name
-                    )
-    # anos <- setNames(c(1:length(indicador_reg_ativo$Anos)), indicador_reg_ativo$Anos)
+  output$selecIndRegiaoAutoUI <- renderUI({
+    title <- "Selecione um indicador"
+    if (!is.null(indicador_reg_ativo)) {
+      if (!is.null(ind_reg_index$sub_ind)) {
+        title <- indicador_reg_ativo$NomesIndicadores[as.integer(ind_reg_index$sub_ind)]
+      }
+    }
+    
+    dropdown(
+      fluidRow(
+        h4(strong("Seleção de Indicador")),
+        pickerInput(
+          inputId = "selecIndRegAuto",
+          label = "Indicador",
+          choices = setNames(2:length(matriz$Nomes), matriz$Nomes[-1]),
+          selected = ind_reg_index$ind,
+          options = list(`live-search` = TRUE)
+        ),
+        uiOutput("selecSubIndRegAutoUI")
+      ),
+      tooltip = "Clique para selecionar o indicador",
+      label = title,
+      icon = icon("list"),
+      align = "center",
+      id = "dropdownSelectRegInd",
+      width = "320px"
+    )
+  })
+  
+  output$selecSubIndRegAutoUI <- renderUI({
+    req(!is.null(ind_reg_index$sub_ind))
+    req(!is.null(ind_reg_index$year))
+    subinds <- indicador_reg_ativo$NomesIndicadores
     anos <- indicador_reg_ativo$Anos
-    tagList(h3(strong(title)),
-            h4(paste0(numero, " municípios")), 
-            pickerInput(
-              inputId = "selecAnoReg",
-              label = "Ano", 
-              choices = anos
-            ))
-  })
-  
-  output$boxResumoRegionalUI <- renderUI({
-    req(input$selecRegiao)
-    req(input$selecSubIndReg)
-    req(input$selecAnoReg)
-    req(ind_data$reg_cut)
-    
-    #print(head(ind_data$reg$Ano))
-    # print((input$selecAnoReg))
-    
-    
-    #print(head(ind_data$reg_cut))
-    cutData <- ind_data$reg_cut[ind_data$reg_cut$Ano == input$selecAnoReg,]
-    cutDataSP <- ind_data$reg[ind_data$reg$Ano == input$selecAnoReg,]
-    
-    media <- mean(cutData$Valor, na.rm=TRUE)
-    mediaSP <- mean(cutDataSP$Valor, na.rm=TRUE)
-
-    maior <- cutData[cutData$Valor == max(cutData$Valor, na.rm=TRUE),]
-    menor <- cutData[cutData$Valor == min(cutData$Valor, na.rm=TRUE),]
-    
-    maiorValor <- maior$Valor[1]
-    menorValor <- menor$Valor[1]
-    maiorNome <- maior$Município[1]
-    menorNome <- menor$Município[1]
-    
-    if (dim(maior)[1] > 1) {
-      maiorNome <- paste0("Em ", dim(maior)[1], " municípios")
-    }
-    
-    if (dim(menor)[1] > 1) {
-      menorNome <- paste0("Em ", dim(menor)[1], " municípios")
-    }
-    
-    
-    
-  
-    
     tagList(
-      column(6, 
-             wellPanel(
-               tagList(
-                 h1(round(media, 2)),
-                 h4("Média")
-               ),
-               style = paste0("
-                              background-color: ", "#230963", ";
-                              text-align: center;
-                              border-radius: 5px;
-                              border: 2px solid gray;
-                              color: #FFFFFF;
-                              height: 200px;
-                              vertical-align: middle;
-                              max-width: 320px
-                              
-                              ")
-               ),
-             align = "center"),
-      column(6, 
-             wellPanel(
-               tagList(
-                 h1(round(mediaSP, 2)),
-                 h4("Média do Estado")
-               ),
-               style = paste0("
-                              background-color: ", "#311378", ";
-                              text-align: center;
-                              border: 2px solid gray;
-                              color: #FFFFFF;
-                              height: 200px;
-                              max-width: 320px
-                              ")
-               ),
-             align = "center"),
-      column(6, 
-             wellPanel(
-               tagList(
-                 h4("Maior ocorrência"),
-                 h1(round(maiorValor, 2)),
-                 h4(paste0(maiorNome))
-               ),
-               style = paste0("
-                              background-color:", "#FFB000", ";
-                              text-align: center;
-                              border: 2px solid gray;
-                              color: #FFFFFF;
-                              height: 200px;
-                              max-width: 320px
-                              ")
-             ), align = "center"), 
-      column(6, 
-             wellPanel(
-               tagList(
-                 h4("Menor ocorrência"),
-                 h1(round(menorValor, 2)),
-                 h4(paste0(menorNome))
-               ),
-               style = paste0("
-                              background-color:", "#FFB819", ";
-                              text-align: center;
-                              border: 2px solid gray;
-                              color: #FFFFFF;
-                              height: 200px;
-                              max-width: 320px
-                              ")
-             ), align = "center")
+      pickerInput(
+        "selecSubIndRegAuto",
+        label = "Conteúdo",
+        choices = setNames(1:length(subinds), subinds),
+        selected = as.integer(ind_reg_index$sub_ind)
+      ),
+      pickerInput(
+        inputId = "selecAnoReg",
+        label = "Ano",
+        choices = anos,
+        selected = as.integer(ind_reg_index$year)
       )
-    
+    )
   })
   
+  observeEvent(input$selecIndRegAuto, {
+    ind_reg_index$ind <<- input$selecIndRegAuto
+  })
+  
+  observeEvent(input$selecSubIndRegAuto, {
+    ind_reg_index$sub_ind <<- input$selecSubIndRegAuto
+  })
+  
+  observeEvent(input$selecAnoReg, {
+    ind_reg_index$year <<- input$selecAnoReg
+  })
+  
+  observeEvent({
+    ind_reg_index$ind
+    ind_reg_index$sub_ind
+  }, {
+    if (!is.null(ind_reg_index$sub_ind)) {
+      key <- paste0(ind_reg_index$ind, ind_reg_index$sub_ind)
+      if (key != ind_data$reg_id) {
+        line_index <- which(indicador_reg_ativo$NomesLinhas == "Município")
+        if (length(line_index) > 0) {
+          response <-
+            s_tabnet_df_retrieval(indicador_reg_ativo,
+                                  line_index,
+                                  as.integer(ind_reg_index$sub_ind),
+                                  timeout = 4)
+          if (is.null(response$error)) {
+            ind_data$reg <<- response$result
+            ind_data$reg_id <<- key
+            print(head(ind_data$reg))
+          } else {
+            print(response$error)
+          }
+        } else {
+          print("linha 2")
+        }
+      }
+    }
+  })
+  
+  observeEvent(ind_data$reg, {
+    print("data load")
+  })
+  
+  observeEvent(ind_reg_index$ind, {
+    if (!is.null(ind_reg_index$ind)) {
+      response <- s_make_tabnet_obj(matriz$Links[as.integer(ind_reg_index$ind)])
+      if (is.null(response$error)) {
+        indicador_reg_ativo <<- response$result
+        ind_reg_index$sub_ind <<- length(indicador_reg_ativo$NomesIndicadores)
+        ind_reg_index$year <<- indicador_reg_ativo$Anos[1]
+      }
+    }
+  })
+  
+  
+  #painel de nome
+  output$nomeIndRegUI <- renderUI({
+    req(length(regions$muns) > 0)
+    region_name <-
+      names(regions$regionNames)[regions$regionNames == regions$regionId]
+    num_muns <- length(regions$muns)
+    tags <- NULL
+    if (!is.null(ind_data$reg)) {
+      tags <- tagList(wellPanel(
+        h4(strong(
+          paste0(indicador_reg_ativo$NomesIndicadores[as.integer(ind_reg_index$sub_ind)],
+                 " em ", region_name)
+        )),
+        h5(ind_reg_index$year),
+        h5(paste0(
+          num_muns, ifelse(num_muns > 1, " municípios", " município")
+        )),
+        style = paste0("background-color:",
+                       "#FFDC8F",
+                       ";
+                       "),
+        align = "center"
+        ))
+    } else {
+      tags <- tagList(
+        wellPanel(h4(strong(region_name)),
+                  h5(paste0(
+                    num_muns, ifelse(num_muns > 1, " municípios", " município")
+                  )),
+        style = paste0("background-color:",
+                       "#FFDC8F",
+                       ";
+                       "),
+        align = "center"
+        ))
+    }
+    tags
+  })
+  
+  #mapa
   output$leafletRegionalUI <- renderUI({
     tagList(
       leafletOutput("leafletRegional"),
-      column(6, downloadBttn("botaoDownloadMapaRegiao", "Baixar Mapa", style = "minimal")),
+      column(6, downloadBttn("botaoDownloadMapaRegiao", "Baixar Mapa", style = "minimal"), align = "right",
+             style="padding:20px;"),
       column(6, 
              br(),
              materialSwitch(
-        inputId = "mapaRegLabels",
-        label = "Nome dos municípios no mapa",
-        value = FALSE, 
-        status = "info"
-      ))
+               inputId = "mapaRegLabels",
+               label = "Nome dos municípios no mapa",
+               value = FALSE, 
+               status = "info"
+             ),
+             align = "left",
+             style="padding:10px;")
       
     )
   })
   
+  observeEvent(
+    {ind_data$reg
+      regions$muns
+      }, 
+    {
+      ind_data$reg_cut <<- ind_data$reg[ind_data$reg$id %in% regions$muns,]
+      #print(head(ind_data$reg_cut))
+    }
+  )
+  
   output$leafletRegional <- renderLeaflet({
-    req(input$selecRegiao)
-    req(input$selecSubIndReg)
-    req(input$selecAnoReg)
-    req(ind_data$reg_cut)
+    ind_data$reg_cut
+    req(!is.null(ind_reg_index$year))
+    req(is.data.frame(ind_data$reg_cut))
+    req(dim(ind_data$reg_cut)[1] > 0)
+    
+    #print("leafletRegional")
+    
+    plotData <- ind_data$reg_cut[ind_data$reg_cut$Ano == ind_reg_index$year,]
+    print(plotData)
+    leaflet()
     
     geometry <- sp_cities_md
-    cutData <- ind_data$reg_cut[ind_data$reg_cut$Ano == input$selecAnoReg,]
-    
-    plotData <- merge(geometry, cutData, by.x="cod_mun", by.y="id", all.x=FALSE)
-    
-    print(head(plotData))
-    
+    plotData <- merge(geometry, plotData, by.x="cod_mun", by.y="id", all.x=FALSE)
     bounds <- st_bbox(plotData)
-    
-    bins <- bins(plotData$Valor[!is.na(plotData$Valor)], target.bins = 4, minpts = 1, exact.groups = TRUE)
-    bins <- bins.getvals(bins)
-    bins <- as.numeric(bins)
-    bins[1] <- min(plotData$Valor, na.rm = TRUE)
-    bins[5] <- max(plotData$Valor, na.rm = TRUE)
-    
-    pal <- colorBin(gradient_primary_2, plotData$Valor, bins = bins)
     
     labels <- sprintf(
       "<strong>%s</strong><br/>Valor em %s: %g",
       plotData$Município, plotData$Ano, plotData$Valor
     ) %>% lapply(htmltools::HTML)  
     
-    leaflet() %>%
+    
+    #Base Map
+    l <- leaflet() %>%
       addTiles(
         urlTemplate = positron_no_labels,
         attribution = 'Mapa por <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
       ) %>%
       setView(mean(bounds[c(1,3)]),
-              mean(bounds[c(2,4)]), zoom = 7.6) %>%
-      addLegend(pal = pal, values = plotData$Valor, opacity = 0.6, title = indicador_reg_ativo$NomesIndicadores[as.integer(input$selecSubIndReg)],
-                position = "bottomright") %>%
-      addPolygons(data = plotData,
-                  fillColor = pal(plotData$Valor),
-                  fillOpacity = 0.8,
-                  smoothFactor = 0,
-                  color = "black",
-                  weight = 1,
-                  group = "Polígonos",
-                  highlightOptions = highlightOptions(
-                    weight = 4,
-                    color = "white",
-                    opacity = 1,
-                    fillOpacity = 0.9,
-                    bringToFront = TRUE
-                  ),
-                  label = labels,
-                  labelOptions = labelOptions(
-                    style = list("font-weight" = "normal", padding = "3px 8px"),
-                    textsize = "15px",
-                    direction = "auto"))
+              mean(bounds[c(2,4)]), zoom = 7.6)
+    
+    
+    #Divide numeric variable into bins
+    numBins <- 4
+    repeat{
+      bins_result <- s_bins(plotData$Valor[!is.na(plotData$Valor)], target.bins = numBins, minpts = 1, exact.groups = TRUE)
+      if(is.null(bins_result$error) | numBins <= 1){
+        break
+      }
+      numBins <- numBins - 1
+      print(paste0("trying with: ", numBins, " bins"))
+    }
+    print(bins_result$error)
+    
+    #Case 1: Possible to use bins
+    if (is.null(bins_result$error)) {
+      bins <- bins_result$result
+      bins <- bins.getvals(bins)
+      bins <- as.numeric(bins)
+      bins[1] <- min(plotData$Valor, na.rm = TRUE)
+      bins[length(bins)] <- max(plotData$Valor, na.rm = TRUE)
+      
+      pal <- colorBin(gradient_primary_2, plotData$Valor, bins = bins)
+      
+      l <- l %>%
+        addLegend(pal = pal, values = plotData$Valor, opacity = 0.6, title = indicador_reg_ativo$NomesIndicadores[as.integer(ind_reg_index$sub_ind)],
+                  position = "bottomright") %>%
+        addPolygons(data = plotData,
+                    fillColor = pal(plotData$Valor),
+                    fillOpacity = 0.8,
+                    smoothFactor = 0,
+                    color = "black",
+                    weight = 1,
+                    group = "Polígonos",
+                    highlightOptions = highlightOptions(
+                      weight = 4,
+                      color = "white",
+                      opacity = 1,
+                      fillOpacity = 0.9,
+                      bringToFront = TRUE
+                    ),
+                    label = labels,
+                    labelOptions = labelOptions(
+                      style = list("font-weight" = "normal", padding = "3px 8px"),
+                      textsize = "15px",
+                      direction = "auto"))
+    } else { #case 2: no bins can be applied
+      l <- l %>%
+        addPolygons(data = plotData,
+                    fillColor = gradient_primary_2[3],
+                    fillOpacity = 0.8,
+                    smoothFactor = 0,
+                    color = "black",
+                    weight = 1,
+                    group = "Polígonos",
+                    highlightOptions = highlightOptions(
+                      weight = 4,
+                      color = "white",
+                      opacity = 1,
+                      fillOpacity = 0.9,
+                      bringToFront = TRUE
+                    ),
+                    label = labels,
+                    labelOptions = labelOptions(
+                      style = list("font-weight" = "normal", padding = "3px 8px"),
+                      textsize = "15px",
+                      direction = "auto"))
+    }
+    
+    l
   })
   
   mapaRegiaoDownload <- reactive({
-    req(input$selecRegiao)
-    req(input$selecSubIndReg)
-    req(input$selecAnoReg)
-    req(ind_data$reg_cut)
     geometry <- sp_cities_md
-    colnames(geometry)[1] <- c("id")
-    yearCut <- ind_data$reg_cut[ind_data$reg_cut$Ano == input$selecAnoReg,]
-    plotData <- merge(geometry, yearCut, by="id", all.x=FALSE)
+    plotData <- ind_data$reg_cut[ind_data$reg_cut$Ano == ind_reg_index$year,]
+    plotData <- merge(geometry, plotData, by.x="cod_mun", by.y="id", all.x=FALSE)
     palette = "GnBu"
     bounds <- st_bbox(plotData)
     
-    region_data <- switch (input$selecRegiaoKind,
-                           "DRS" = drs_list,
-                           "Região de Saúde" = reg_saude_list,
-                           "RRAS" = rras_list)
-    colnames(region_data) <- c("cod", "nome")
-    region_name <- region_data[region_data$cod == input$selecRegiao, 2]
+    name <- names(regions$regionNames)[regions$regionNames==regions$regionId]
     
-    bins <- bins(plotData$Valor[!is.na(plotData$Valor)], target.bins = 4, minpts = 1, exact.groups = TRUE)
-    bins <- bins.getvals(bins)
-    bins <- as.numeric(bins)
+    #Divide numeric variable into bins
+    numBins <- 4
+    repeat{
+      bins_result <- s_bins(plotData$Valor[!is.na(plotData$Valor)], target.bins = numBins, minpts = 1, exact.groups = TRUE)
+      if(is.null(bins_result$error) | numBins <= 1){
+        break
+      }
+      numBins <- numBins - 1
+      print(paste0("trying with: ", numBins, " bins"))
+    }
     
-    plotData <- plotData %>% 
-      mutate(valor_discreto = num_intervals_breaks(plotData$Valor, bins))
+    print("download data:")
+    print(head(plotData))
     
+    if (is.null(bins_result$error)) {
+      bins <- bins_result$result
+      bins <- bins.getvals(bins)
+      bins <- as.numeric(bins)
+      plotData <- plotData %>% 
+        mutate(valor_discreto = num_intervals_breaks(plotData$Valor, bins))
+    } else {
+      plotData$valor_discreto <- as.factor(plotData$Valor)
+    }
     plotData$Município <- as.character(plotData$Município)
-    print(plotData)
     dataPoints <- sf::st_point_on_surface(plotData)
     dataCoords <- as.data.frame(sf::st_coordinates(dataPoints))
     dataCoords$Name <- plotData$Município
-    print(head(dataCoords))
     g <- ggplot() + 
       geom_sf(data=plotData, aes(fill=valor_discreto, data_id = Município), lwd = 0.2) + 
-      scale_fill_brewer(indicador_reg_ativo$NomesIndicadores[as.integer(input$selecSubIndReg)], palette = palette)
+      scale_fill_brewer(indicador_reg_ativo$NomesIndicadores[as.integer(ind_reg_index$sub_ind)], palette = palette)
     
     if (input$mapaRegLabels) {
       g <- g +
         geom_text(data=dataCoords, aes(X, Y, label = Name), colour = "black")
     }
-      
-      
-    #scale_fill_manual(gradient_sec_2)
     
     g <- g +
-      ggtitle(paste0(indicador_reg_ativo$NomesIndicadores[as.integer(input$selecSubIndReg)], " em ",
-                     region_name, ", em ", input$selecAnoReg
+      ggtitle(paste0(indicador_reg_ativo$NomesIndicadores[as.integer(ind_reg_index$sub_ind)], " em ",
+                     name, ", em ", ind_reg_index$year
       )) +
       theme(panel.grid.major = element_blank(), panel.background = element_rect(fill = "white"),
             plot.title = element_text(hjust = 0.5, size = 15), axis.title = element_blank(),
@@ -1726,16 +1802,13 @@ function(input, output, session) {
   
   output$botaoDownloadMapaRegiao <- downloadHandler(
     filename = function() {
-      paste0(indicador_reg_ativo$NomesIndicadores[as.integer(input$selecSubIndReg)], 
+      paste0(indicador_reg_ativo$NomesIndicadores[as.integer(ind_reg_index$sub_ind)], 
              "_",
-             input$selecAnoReg,
+             ind_reg_index$year,
              ".png"
       )
     },
     content = function(file) {
-      req(input$selecRegiao)
-      req(input$selecSubIndReg)
-      req(input$selecAnoReg)
       ggsave(file, mapaRegiaoDownload(), width = 16, height = 10.4)
     }
   )

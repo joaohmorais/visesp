@@ -8,6 +8,7 @@ library(shinyWidgets)
 source("home.R")
 source("indicadores.R")
 source("regioes_tab.R")
+source("como_usar.R")
 
 
 navbarPage(
@@ -27,5 +28,10 @@ navbarPage(
     "Regiões",
     regioes,
     icon = icon("map")
+  ),
+  tabPanel(
+    "Como usar",
+    como_usar,
+    icon = icon("question-circle-o")
   )
 )
