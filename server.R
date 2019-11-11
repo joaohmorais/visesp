@@ -3,6 +3,7 @@ source("globals.R")
 library(shiny)
 library(rtabnetsp)
 library(shinyjs)
+library(ggplot2)
 library(DT)
 library(stringi)
 library(shinyWidgets)
@@ -849,7 +850,7 @@ function(input, output, session) {
       req(is.logical(input$graficoBarraEixo))
       g <- graficoBarrasIndicadoresPlot()
       if (!is.null(g)) {
-        gp <- ggplotly(g, tooltip = "tooltip_label") %>% config(displayModeBar = FALSE)
+        gp <- ggplotly(g, tooltip = "tooltip_label") %>% plotly::config(displayModeBar = FALSE)
         if (input$graficoBarraEixo) {
           gp <- gp %>% style(textposition = "right")
         }
@@ -857,7 +858,7 @@ function(input, output, session) {
     } else {
       g <- graficoLinhasIndicadoresPlot()
       if (!is.null(g)) {
-        gp <- ggplotly(g, tooltip = "tooltip_label") %>% config(displayModeBar = FALSE)
+        gp <- ggplotly(g, tooltip = "tooltip_label") %>% plotly::config(displayModeBar = FALSE)
       }
     }
     
@@ -1334,6 +1335,7 @@ function(input, output, session) {
   })
   
   observeEvent(input$selecRegiaoKind, {
+    print("selecRegiaoKind")
     regions$regionNames <<- switch (input$selecRegiaoKind,
                             "DRS" = setNames(drs_list[,1], drs_list[,2]),
                             "Região de Saúde" = setNames(reg_saude_list[,1], reg_saude_list[,2]),
@@ -1479,10 +1481,11 @@ function(input, output, session) {
         pickerInput(
           inputId = "selecIndRegAuto",
           label = "Indicador",
-          choices = setNames(2:length(matriz$Nomes), matriz$Nomes[-1]),
+          choices = setNames(2:length(matriz$Nomes), matriz$Nomes[-1])[-4],
           selected = ind_reg_index$ind,
           options = list(`live-search` = TRUE)
-        ),
+        )
+      ,
         uiOutput("selecSubIndRegAutoUI")
       ),
       tooltip = "Clique para selecionar o indicador",
@@ -1516,14 +1519,17 @@ function(input, output, session) {
   })
   
   observeEvent(input$selecIndRegAuto, {
+    print("selecIndRegAuto")
     ind_reg_index$ind <<- input$selecIndRegAuto
   })
   
   observeEvent(input$selecSubIndRegAuto, {
+    print("selecSubIndRegAuto")
     ind_reg_index$sub_ind <<- input$selecSubIndRegAuto
   })
   
   observeEvent(input$selecAnoReg, {
+    print("selecAnoReg")
     ind_reg_index$year <<- input$selecAnoReg
   })
   
@@ -1531,6 +1537,8 @@ function(input, output, session) {
     ind_reg_index$ind
     ind_reg_index$sub_ind
   }, {
+    print("ind_reg_index$ind
+    ind_reg_index$sub_ind")
     if (!is.null(ind_reg_index$sub_ind)) {
       key <- paste0(ind_reg_index$ind, ind_reg_index$sub_ind)
       if (key != ind_data$reg_id) {
@@ -1560,6 +1568,7 @@ function(input, output, session) {
   })
   
   observeEvent(ind_reg_index$ind, {
+    print("ind_reg_index$ind")
     if (!is.null(ind_reg_index$ind)) {
       response <- s_make_tabnet_obj(matriz$Links[as.integer(ind_reg_index$ind)])
       if (is.null(response$error)) {
@@ -1742,6 +1751,157 @@ function(input, output, session) {
     l
   })
   
+  output$boxResumoRegionalUI <- renderUI({
+    ind_data$reg_cut
+    req(!is.null(ind_reg_index$year))
+    req(is.data.frame(ind_data$reg_cut))
+    req(dim(ind_data$reg_cut)[1] > 0)
+    
+    cutData <- ind_data$reg_cut[ind_data$reg_cut$Ano == ind_reg_index$year,]
+    cutDataSP <- ind_data$reg[ind_data$reg$Ano == ind_reg_index$year,]
+    
+    media <- mean(cutData$Valor, na.rm=TRUE)
+    mediaSP <- mean(cutDataSP$Valor, na.rm=TRUE)
+    
+    maior <- cutData[cutData$Valor == max(cutData$Valor, na.rm=TRUE),]
+    menor <- cutData[cutData$Valor == min(cutData$Valor, na.rm=TRUE),]
+    
+    maiorValor <- maior$Valor[1]
+    menorValor <- menor$Valor[1]
+    maiorNome <- maior$Município[1]
+    menorNome <- menor$Município[1]
+    
+    if (dim(maior)[1] > 1) {
+      maiorNome <- paste0("Em ", dim(maior)[1], " municípios")
+    }
+    
+    if (dim(menor)[1] > 1) {
+      menorNome <- paste0("Em ", dim(menor)[1], " municípios")
+    }
+    
+    
+    
+    
+    
+    tagList(
+      column(6, 
+             wellPanel(
+               tagList(
+                 h1(round(media, 2)),
+                 h4("Média")
+               ),
+               style = paste0("
+                              background-color: ", "#230963", ";
+                              text-align: center;
+                              border-radius: 5px;
+                              border: 2px solid gray;
+                              color: #FFFFFF;
+                              height: 200px;
+                              vertical-align: middle;
+                              max-width: 320px
+                              
+                              ")
+               ),
+             align = "center"),
+      column(6, 
+             wellPanel(
+               tagList(
+                 h1(round(mediaSP, 2)),
+                 h4("Média do Estado")
+               ),
+               style = paste0("
+                              background-color: ", "#311378", ";
+                              text-align: center;
+                              border: 2px solid gray;
+                              color: #FFFFFF;
+                              height: 200px;
+                              max-width: 320px
+                              ")
+               ),
+             align = "center"),
+      column(6, 
+             wellPanel(
+               tagList(
+                 h4("Menor ocorrência"),
+                 h1(round(menorValor, 2)),
+                 h4(paste0(menorNome))
+               ),
+               style = paste0("
+                              background-color:", "#FFB000", ";
+                              text-align: center;
+                              border: 2px solid gray;
+                              color: #FFFFFF;
+                              height: 200px;
+                              max-width: 320px
+                              ")
+             ), align = "center"), 
+    column(6, 
+           wellPanel(
+             tagList(
+               h4("Maior ocorrência"),
+               h1(round(maiorValor, 2)),
+               h4(paste0(maiorNome))
+             ),
+             style = paste0("
+                            background-color:", "#FFB819", ";
+                            text-align: center;
+                            border: 2px solid gray;
+                            color: #FFFFFF;
+                            height: 200px;
+                            max-width: 320px
+                            ")
+             ), align = "center")
+             )
+  })
+  
+  output$graficoBarrasReg <- renderPlotly({
+    ind_data$reg_cut
+    req(!is.null(ind_reg_index$year))
+    req(is.data.frame(ind_data$reg_cut))
+    req(dim(ind_data$reg_cut)[1] > 0)
+    g <- graficoBarrasRegPlot()
+    ggplotly(g,  tooltip = "tooltip_label") %>% plotly::config(displayModeBar = FALSE)
+  })
+  
+  graficoBarrasRegPlot <- reactive({
+    g <- NULL
+    plotData <- ind_data$reg_cut[ind_data$reg_cut$Ano == ind_reg_index$year,]
+    if (dim(plotData)[1] > 0) {
+      plotData$Label <- paste0(plotData$Nome, "\nAno: ", plotData$Ano, "\nValor: ", plotData$Valor)
+      
+      if (input$graficoBarraIndRegOrder) {
+        plotData$Município <- factor(plotData$Município, levels = plotData$Município[order(plotData$Valor)])
+      }
+      
+      
+      if (dim(plotData)[1] > 30) {
+          plotData <- plotData[c(1:30),]
+          title <- paste0(indicador_reg_ativo$NomesIndicadores[as.integer(ind_reg_index$sub_ind)], " em ", 
+                          names(regions$regionNames)[regions$regionNames == regions$regionId], " em ", ind_reg_index$year, " (maiores valores)")
+      } else {
+        title <- paste0(indicador_reg_ativo$NomesIndicadores[as.integer(ind_reg_index$sub_ind)], " em ", 
+                        names(regions$regionNames)[regions$regionNames == regions$regionId], " em ", ind_reg_index$year)
+        }
+      g <- ggplot(data=plotData, aes(x=Município, y=Valor, fill = Valor,
+                                     tooltip_label = Label)) +
+        geom_bar(stat="identity", width = 0.6, position = 'dodge', color = "white") + 
+        ggtitle(title) + 
+        ylab(indicador_reg_ativo$NomesIndicadores[as.integer(ind_reg_index$sub_ind)]) +
+        xlab("") +
+        scale_fill_gradient(low = '#583d9b', high = '#311378') +
+        theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
+              legend.title = element_blank(), legend.position = "none", 
+              panel.background = element_rect(fill = '#FFFFFF')) 
+      
+      
+      if (length(unique(plotData$Município)) > 6) {
+        g <- g + theme(axis.text.x = element_text(angle=90))
+      }
+      
+    }
+    g
+  })
+  
   mapaRegiaoDownload <- reactive({
     geometry <- sp_cities_md
     plotData <- ind_data$reg_cut[ind_data$reg_cut$Ano == ind_reg_index$year,]
@@ -1810,6 +1970,19 @@ function(input, output, session) {
     },
     content = function(file) {
       ggsave(file, mapaRegiaoDownload(), width = 16, height = 10.4)
+    }
+  )
+  
+  output$botaoDownloadGraficoLinhasReg <- downloadHandler(
+    filename = function() {
+      paste0(indicador_reg_ativo$NomesIndicadores[as.integer(ind_reg_index$sub_ind)], 
+             "_",
+             ind_reg_index$year,
+             ".png"
+      )
+    },
+    content = function(file) {
+      ggsave(file, graficoBarrasRegPlot())
     }
   )
 }

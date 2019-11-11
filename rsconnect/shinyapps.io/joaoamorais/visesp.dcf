@@ -5,8 +5,8 @@ account: joaoamorais
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 1321710
-bundleId: 2519192
+bundleId: 2580031
 url: https://joaoamorais.shinyapps.io/visesp/
-when: 1571628995.51292
+when: 1573477781.58465
 asMultiple: FALSE
 asStatic: FALSE

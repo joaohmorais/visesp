@@ -12,13 +12,29 @@ regioes <- fluidPage(
            , align = "center"),
   fluidRow(uiOutput("nomeIndRegUI")),
   fluidRow(
-    uiOutput("leafletRegionalUI"),
+    uiOutput("leafletRegionalUI")),
+  fluidRow(
     # column(6,
     #        helpText("Selecione uma região clicando no mapa abaixo."),
     #        leafletOutput("leafletRegionSelect"),
     #        align = "center"),
-    column(6
-           ,
+    column(6,
+           fluidRow(
+                    awesomeCheckbox(
+                      inputId = "graficoBarraIndRegOrder",
+                      label = "Ordenar por valor", 
+                      value = TRUE,
+                      status = "info"
+                    ),
+                    align="center"
+           ),
+           plotlyOutput("graficoBarrasReg"),
+           fluidRow(
+           downloadBttn("botaoDownloadGraficoLinhasReg", "Baixar Gráfico", style = "minimal"),
+           align = "center"
+           )
+           ),
+    column(6,
            uiOutput("boxResumoRegionalUI")
            )
     # ,

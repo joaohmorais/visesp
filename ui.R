@@ -4,6 +4,7 @@ library(shinyjs)
 library(DT)
 library(leaflet)
 library(shinyWidgets)
+library(plotly)
 
 source("home.R")
 source("indicadores.R")
